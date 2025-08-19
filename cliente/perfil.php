@@ -3,22 +3,10 @@ session_start();
 include '../includes/conexao.php';
 include '../includes/functions.php';
 
-// Debug: verificar se a sessão está funcionando
-if (!isset($_SESSION['cliente_id'])) {
-    echo "Erro: Sessão não encontrada. ID do cliente: " . ($_SESSION['cliente_id'] ?? 'não definido');
-    exit;
-}
-
 requireLogin();
 
 $message = '';
 $message_type = '';
-
-// Verifica se a sessão existe
-if (!isset($_SESSION['cliente_id'])) {
-    header('Location: /login.php');
-    exit;
-}
 
 // Get customer info
 $stmt = $pdo->prepare("SELECT c.*, b.nome as bairro_nome, b.valor_frete FROM clientes c JOIN bairros b ON c.bairro_id = b.id WHERE c.id = ?");
@@ -126,27 +114,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Get customer orders with details
-$stmt = $pdo->prepare("
-    SELECT p.*, 
-           GROUP_CONCAT(
-               CONCAT(pi.quantidade, 'x ', 
-                      CASE 
-                          WHEN pi.tipo_item = 'lanche' THEN l.nome 
-                          ELSE a.nome 
-                      END
-               ) SEPARATOR ', '
-           ) as itens
-    FROM pedidos p
-    LEFT JOIN pedido_itens pi ON p.id = pi.pedido_id
-    LEFT JOIN lanches l ON pi.tipo_item = 'lanche' AND pi.item_id = l.id
-    LEFT JOIN acompanhamentos a ON pi.tipo_item = 'acompanhamento' AND pi.item_id = a.id
-    WHERE p.cliente_id = ?
-    GROUP BY p.id, p.cliente_id, p.total_produtos, p.frete, p.total_geral, p.status, p.observacoes, p.endereco_entrega, p.created_at, p.updated_at, p.forma_pagamento, p.confirmado_cliente
-    ORDER BY p.created_at DESC
-");
-$stmt->execute([$_SESSION['cliente_id']]);
-$pedidos = $stmt->fetchAll();
+// Get customer orders with details (simplified query)
+$pedidos = [];
+if ($cliente) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT p.*, 
+                   GROUP_CONCAT(
+                       CONCAT(pi.quantidade, 'x ', 
+                              CASE 
+                                  WHEN pi.tipo_item = 'lanche' THEN l.nome 
+                                  ELSE a.nome 
+                              END
+                       ) SEPARATOR ', '
+                   ) as itens
+            FROM pedidos p
+            LEFT JOIN pedido_itens pi ON p.id = pi.pedido_id
+            LEFT JOIN lanches l ON pi.tipo_item = 'lanche' AND pi.item_id = l.id
+            LEFT JOIN acompanhamentos a ON pi.tipo_item = 'acompanhamento' AND pi.item_id = a.id
+            WHERE p.cliente_id = ?
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$_SESSION['cliente_id']]);
+        $pedidos = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Se houver erro na consulta dos pedidos, continue sem eles
+        $pedidos = [];
+    }
+}
 
 // Get neighborhoods for dropdown
 $stmt = $pdo->query("SELECT * FROM bairros WHERE ativo = 1 ORDER BY nome");
@@ -163,7 +160,7 @@ include '../includes/header.php';
             <?php if (!empty($message)): ?>
             <div class="alert alert-<?= $message_type ?> alert-dismissible fade show">
                 <i class="fas fa-<?= $message_type === 'success' ? 'check-circle' : 'exclamation-circle' ?> me-2"></i>
-                <?= htmlspecialchars($message) ?>
+                <?= $message ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             <?php endif; ?>
@@ -262,10 +259,19 @@ include '../includes/header.php';
                     </form>
                 </div>
             </div>
+            <?php else: ?>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Erro ao carregar dados do cliente. Tente fazer login novamente.
+                <div class="mt-2">
+                    <a href="/cliente/logout.php" class="btn btn-sm btn-outline-danger">Fazer Login Novamente</a>
+                </div>
+            </div>
             <?php endif; ?>
         </div>
         
         <div class="col-lg-4">
+            <?php if ($cliente): ?>
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-user-circle me-2"></i>Informações do Cliente</h5>
@@ -307,7 +313,7 @@ include '../includes/header.php';
                     <?php if (empty($pedidos)): ?>
                     <p class="text-muted text-center">Nenhum pedido encontrado</p>
                     <?php else: ?>
-                    <?php foreach (array_slice($pedidos, 0, 3) as $pedido): ?>
+                    <?php foreach ($pedidos as $pedido): ?>
                     <div class="border-bottom pb-2 mb-2">
                         <div class="d-flex justify-content-between">
                             <strong>Pedido #<?= $pedido['id'] ?></strong>
@@ -333,6 +339,7 @@ include '../includes/header.php';
                     <?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
