@@ -85,7 +85,7 @@ $where_clause = empty($where_conditions) ? '' : 'WHERE ' . implode(' AND ', $whe
 
 // Get orders with customer details
 $stmt = $pdo->prepare("
-    SELECT p.*, c.nome as cliente_nome, c.telefone as cliente_telefone, c.email as cliente_email,
+    SELECT DISTINCT p.*, c.nome as cliente_nome, c.telefone as cliente_telefone, c.email as cliente_email,
            b.nome as bairro_nome
     FROM pedidos p 
     JOIN clientes c ON p.cliente_id = c.id 
@@ -103,6 +103,11 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($params);
 $pedidos = $stmt->fetchAll();
+
+// Debug temporário - remover depois
+$debug_count = count($pedidos);
+$debug_pending = count(array_filter($pedidos, function($p) { return $p['status'] === 'pendente'; }));
+error_log("Total pedidos: $debug_count, Pendentes: $debug_pending");
 
 // Get order items for selected order
 $selected_order_id = $_GET['id'] ?? 0;

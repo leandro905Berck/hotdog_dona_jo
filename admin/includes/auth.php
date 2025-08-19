@@ -10,7 +10,7 @@ requireAdmin();
 
 // Get pending orders count for admin (more accurate than notifications)
 try {
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM pedidos WHERE status = 'pendente'");
+    $stmt = $pdo->query("SELECT COUNT(DISTINCT id) as count FROM pedidos WHERE status = 'pendente'");
     $notification_count = $stmt->fetch()['count'];
 } catch (PDOException $e) {
     $notification_count = 0;
