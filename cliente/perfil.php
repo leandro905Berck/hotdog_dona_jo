@@ -9,24 +9,24 @@ $message = '';
 $message_type = '';
 
 // Get customer info
-$stmt = $pdo->prepare("SELECT c.*, b.nome as bairro_nome, b.valor_frete FROM clientes c JOIN bairros b ON c.bairro_id = b.id WHERE c.id = ?");
-$stmt->execute([$_SESSION['cliente_id']]);
-$cliente = $stmt->fetch();
-
-if (!$cliente) {
-    $message = 'Cliente não encontrado';
+try {
+    $stmt = $pdo->prepare("SELECT c.*, b.nome as bairro_nome, b.valor_frete FROM clientes c JOIN bairros b ON c.bairro_id = b.id WHERE c.id = ?");
+    $stmt->execute([$_SESSION['cliente_id']]);
+    $cliente = $stmt->fetch();
+} catch (PDOException $e) {
+    $cliente = null;
+    $message = 'Erro ao carregar dados do cliente.';
     $message_type = 'danger';
 }
 
 // Handle profile update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_profile') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_profile' && $cliente) {
     $nome = cleanInput($_POST['nome'] ?? '');
     $email = cleanInput($_POST['email'] ?? '');
     $telefone = cleanInput($_POST['telefone'] ?? '');
     $endereco = cleanInput($_POST['endereco'] ?? '');
     $bairro_id = (int)($_POST['bairro_id'] ?? 0);
     
-    // Validation
     $errors = [];
     if (empty($nome)) $errors[] = 'Nome é obrigatório';
     if (empty($email)) $errors[] = 'E-mail é obrigatório';
@@ -37,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if (empty($errors)) {
         try {
-            // Check if email already exists (excluding current user)
             $stmt = $pdo->prepare("SELECT id FROM clientes WHERE email = ? AND id != ?");
             $stmt->execute([$email, $_SESSION['cliente_id']]);
             if ($stmt->fetch()) {
@@ -53,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt = $pdo->prepare("UPDATE clientes SET nome = ?, email = ?, telefone = ?, endereco = ?, bairro_id = ? WHERE id = ?");
             $stmt->execute([$nome, $email, $telefone, $endereco, $bairro_id, $_SESSION['cliente_id']]);
             
-            // Update session data
             $_SESSION['cliente_nome'] = $nome;
             $_SESSION['cliente_email'] = $email;
             
@@ -76,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Handle password change
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password' && $cliente) {
     $senha_atual = $_POST['senha_atual'] ?? '';
     $nova_senha = $_POST['nova_senha'] ?? '';
     $confirmar_senha = $_POST['confirmar_senha'] ?? '';
@@ -88,8 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (strlen($nova_senha) < 6) $errors[] = 'Nova senha deve ter pelo menos 6 caracteres';
     if ($nova_senha !== $confirmar_senha) $errors[] = 'Senhas não conferem';
     
-    if (empty($errors) && $cliente) {
-        // Verify current password
+    if (empty($errors)) {
         if (!password_verify($senha_atual, $cliente['senha'])) {
             $errors[] = 'Senha atual incorreta';
         }
@@ -114,40 +111,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Get customer orders with details (simplified query)
+// Get recent orders (simplified)
 $pedidos = [];
 if ($cliente) {
     try {
-        $stmt = $pdo->prepare("
-            SELECT p.*, 
-                   GROUP_CONCAT(
-                       CONCAT(pi.quantidade, 'x ', 
-                              CASE 
-                                  WHEN pi.tipo_item = 'lanche' THEN l.nome 
-                                  ELSE a.nome 
-                              END
-                       ) SEPARATOR ', '
-                   ) as itens
-            FROM pedidos p
-            LEFT JOIN pedido_itens pi ON p.id = pi.pedido_id
-            LEFT JOIN lanches l ON pi.tipo_item = 'lanche' AND pi.item_id = l.id
-            LEFT JOIN acompanhamentos a ON pi.tipo_item = 'acompanhamento' AND pi.item_id = a.id
-            WHERE p.cliente_id = ?
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-            LIMIT 5
-        ");
+        $stmt = $pdo->prepare("SELECT id, status, total_geral, created_at FROM pedidos WHERE cliente_id = ? ORDER BY created_at DESC LIMIT 5");
         $stmt->execute([$_SESSION['cliente_id']]);
         $pedidos = $stmt->fetchAll();
     } catch (PDOException $e) {
-        // Se houver erro na consulta dos pedidos, continue sem eles
         $pedidos = [];
     }
 }
 
-// Get neighborhoods for dropdown
-$stmt = $pdo->query("SELECT * FROM bairros WHERE ativo = 1 ORDER BY nome");
-$bairros = $stmt->fetchAll();
+// Get neighborhoods
+$bairros = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM bairros WHERE ativo = 1 ORDER BY nome");
+    $bairros = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $bairros = [];
+}
 
 include '../includes/header.php';
 ?>
@@ -179,14 +162,14 @@ include '../includes/header.php';
                                 <div class="mb-3">
                                     <label for="nome" class="form-label">Nome Completo</label>
                                     <input type="text" class="form-control" id="nome" name="nome" 
-                                           value="<?= htmlspecialchars($cliente['nome'] ?? '') ?>" required>
+                                           value="<?= htmlspecialchars($cliente['nome']) ?>" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">E-mail</label>
                                     <input type="email" class="form-control" id="email" name="email" 
-                                           value="<?= htmlspecialchars($cliente['email'] ?? '') ?>" required>
+                                           value="<?= htmlspecialchars($cliente['email']) ?>" required>
                                 </div>
                             </div>
                         </div>
@@ -196,7 +179,7 @@ include '../includes/header.php';
                                 <div class="mb-3">
                                     <label for="telefone" class="form-label">Telefone</label>
                                     <input type="tel" class="form-control" id="telefone" name="telefone" 
-                                           value="<?= htmlspecialchars($cliente['telefone'] ?? '') ?>" 
+                                           value="<?= htmlspecialchars($cliente['telefone']) ?>" 
                                            placeholder="(11) 99999-9999" required>
                                 </div>
                             </div>
@@ -207,7 +190,7 @@ include '../includes/header.php';
                                         <option value="">Selecione seu bairro</option>
                                         <?php foreach ($bairros as $bairro): ?>
                                         <option value="<?= $bairro['id'] ?>" 
-                                                <?= (isset($cliente['bairro_id']) && $cliente['bairro_id'] == $bairro['id']) ? 'selected' : '' ?>>
+                                                <?= ($cliente['bairro_id'] == $bairro['id']) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($bairro['nome']) ?> - Frete: <?= formatPrice($bairro['valor_frete']) ?>
                                         </option>
                                         <?php endforeach; ?>
@@ -218,7 +201,7 @@ include '../includes/header.php';
                         
                         <div class="mb-3">
                             <label for="endereco" class="form-label">Endereço Completo</label>
-                            <textarea class="form-control" id="endereco" name="endereco" rows="2" required><?= htmlspecialchars($cliente['endereco'] ?? '') ?></textarea>
+                            <textarea class="form-control" id="endereco" name="endereco" rows="2" required><?= htmlspecialchars($cliente['endereco']) ?></textarea>
                         </div>
                         
                         <button type="submit" class="btn btn-primary">
@@ -279,28 +262,28 @@ include '../includes/header.php';
                 <div class="card-body">
                     <div class="text-center mb-4">
                         <i class="fas fa-user fa-3x text-primary mb-2"></i>
-                        <h5><?= htmlspecialchars($cliente['nome'] ?? 'Cliente') ?></h5>
-                        <p class="text-muted mb-0"><?= htmlspecialchars($cliente['email'] ?? '') ?></p>
+                        <h5><?= htmlspecialchars($cliente['nome']) ?></h5>
+                        <p class="text-muted mb-0"><?= htmlspecialchars($cliente['email']) ?></p>
                     </div>
                     
                     <div class="mb-3">
                         <strong><i class="fas fa-phone me-2"></i>Telefone:</strong><br>
-                        <span><?= htmlspecialchars($cliente['telefone'] ?? '') ?></span>
+                        <span><?= htmlspecialchars($cliente['telefone']) ?></span>
                     </div>
                     
                     <div class="mb-3">
                         <strong><i class="fas fa-home me-2"></i>Endereço:</strong><br>
-                        <span><?= htmlspecialchars($cliente['endereco'] ?? '') ?></span>
+                        <span><?= htmlspecialchars($cliente['endereco']) ?></span>
                     </div>
                     
                     <div class="mb-3">
                         <strong><i class="fas fa-map-marker-alt me-2"></i>Bairro:</strong><br>
-                        <span><?= htmlspecialchars($cliente['bairro_nome'] ?? '') ?></span>
+                        <span><?= htmlspecialchars($cliente['bairro_nome']) ?></span>
                     </div>
                     
                     <div class="mb-3">
                         <strong><i class="fas fa-truck me-2"></i>Frete:</strong><br>
-                        <span><?= formatPrice($cliente['valor_frete'] ?? 0) ?></span>
+                        <span><?= formatPrice($cliente['valor_frete']) ?></span>
                     </div>
                 </div>
             </div>
@@ -319,10 +302,10 @@ include '../includes/header.php';
                             <strong>Pedido #<?= $pedido['id'] ?></strong>
                             <span class="badge bg-<?= 
                                 $pedido['status'] === 'pendente' ? 'warning' :
-                                $pedido['status'] === 'aceito' ? 'info' :
-                                $pedido['status'] === 'preparando' ? 'secondary' :
-                                $pedido['status'] === 'entregando' ? 'primary' :
-                                $pedido['status'] === 'entregue' ? 'success' : 'dark'
+                                ($pedido['status'] === 'aceito' ? 'info' :
+                                ($pedido['status'] === 'preparando' ? 'secondary' :
+                                ($pedido['status'] === 'entregando' ? 'primary' :
+                                ($pedido['status'] === 'entregue' ? 'success' : 'dark'))))
                             ?>"><?= ucfirst($pedido['status']) ?></span>
                         </div>
                         <small class="text-muted"><?= date('d/m H:i', strtotime($pedido['created_at'])) ?></small>
