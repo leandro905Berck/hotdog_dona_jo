@@ -361,9 +361,14 @@ function printOrder(orderId) {
 
 // Auto-refresh every 30 seconds for pending orders
 setInterval(function() {
+    // Update badge count without full page reload
+    updateNotificationBadge();
+    
+    // Only reload if there are pending orders and user hasn't interacted recently
     const hasPendingOrders = <?= json_encode(count(array_filter($pedidos, function($p) { return $p['status'] === 'pendente'; }))) ?> > 0;
-    if (hasPendingOrders) {
-        location.reload();
+    if (hasPendingOrders && !document.querySelector('.modal.show')) {
+        // Only reload if no modal is open
+        setTimeout(() => location.reload(), 1000);
     }
 }, 30000);
 </script>
