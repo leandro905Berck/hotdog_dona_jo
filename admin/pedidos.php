@@ -104,11 +104,6 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $pedidos = $stmt->fetchAll();
 
-// Debug temporário - remover depois
-$debug_count = count($pedidos);
-$debug_pending = count(array_filter($pedidos, function($p) { return $p['status'] === 'pendente'; }));
-error_log("Total pedidos: $debug_count, Pendentes: $debug_pending");
-
 // Get order items for selected order
 $selected_order_id = $_GET['id'] ?? 0;
 $order_items = [];
@@ -362,6 +357,23 @@ function printOrder(orderId) {
             printWindow.close();
             showErrorNotification('Erro ao carregar dados para impressão');
         });
+}
+
+function updateNotificationBadge() {
+    fetch('/api/pedidos_count.php')
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.getElementById('notification-badge');
+            if (badge) {
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => console.error('Error updating badge:', error));
 }
 
 // Auto-refresh every 30 seconds for pending orders
