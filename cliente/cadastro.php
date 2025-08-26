@@ -103,9 +103,7 @@ include '../includes/header.php';
 
                         <div class="mb-3">
                             <label for="telefone" class="form-label">Telefone</label>
-                            <input type="tel" class="form-control" id="telefone" name="telefone" 
-                                   value="<?= htmlspecialchars($_POST['telefone'] ?? '') ?>" 
-                                   placeholder="(11) 99999-9999" required>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" value="<?= htmlspecialchars(preg_replace('/[^0-9]/', '', $_POST['telefone'] ?? '')) ?>" required >
                             <div class="invalid-feedback">Por favor, informe seu telefone.</div>
                         </div>
 
@@ -196,7 +194,6 @@ document.getElementById('confirmar_senha').addEventListener('input', function() 
         this.setCustomValidity('');
         this.classList.remove('is-invalid');
     }
-});
-</script>
+
 
 <?php include '../includes/footer.php'; ?>

@@ -19,7 +19,8 @@
             </div>
             <hr class="my-3">
             <div class="text-center">
-                <p class="mb-0">&copy; 2025 Hot Dog da Dona Jo. Todos os direitos reservados.</p>
+                <p class="mb-1">&copy; 2025 Hot Dog da Dona Jo. Todos os direitos reservados.</p>
+                <p class="mb-0"><br>Desonvolvido por:<br><a href="http://leandromatheusberck.wuaze.com/" class="portfolio-link"><strong>Leandro.dev</strong></a></p>
             </div>
         </div>
     </footer>

@@ -14,10 +14,11 @@ $acompanhamentos = $stmt->fetchAll();
 <!-- Hero Section -->
 <div class="hero-section text-center">
     <div class="container">
-        <h1 class="hero-title">🌭 Hot Dog da Dona Jo</h1>
+        <h1 class="hero-title"><img src="assets/imagens/logo_s.png" style="width: 300px; height: auto;"></h1>
         <p class="hero-subtitle">Os melhores hot dogs da cidade, entregues com carinho na sua casa!</p>
     </div>
 </div>
+
 
 <div class="container">
     <!-- Category Tabs -->
@@ -111,8 +112,13 @@ $acompanhamentos = $stmt->fetchAll();
 </div>
 
 <!-- Floating WhatsApp Button -->
-<button class="whatsapp-fab" onclick="window.open('https://wa.me/5519993636087    ', '_blank')" title="Fale conosco no WhatsApp">
+<button class="whatsapp-fab" onclick="window.open('https://wa.me/5519993636087', '_blank')" title="Fale conosco no WhatsApp">
     <i class="fab fa-whatsapp"></i>
+</button>
+
+<!-- Floating Instagram Button -->
+<button class="instagram-fab" onclick="window.open('https://www.instagram.com/hotdogdadonajo/', '_blank')" title="Acesso nosso Instagram">
+    <i class="fab fa-instagram"></i>
 </button>
 
 <!-- All JavaScript functionality is now handled in assets/js/main.js -->

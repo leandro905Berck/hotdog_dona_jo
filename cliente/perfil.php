@@ -191,7 +191,7 @@ include '../includes/header.php';
                                         <?php foreach ($bairros as $bairro): ?>
                                         <option value="<?= $bairro['id'] ?>" 
                                                 <?= ($cliente['bairro_id'] == $bairro['id']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($bairro['nome']) ?> - Frete: <?= formatPrice($bairro['valor_frete']) ?>
+                                            <?= htmlspecialchars($bairro['nome']) ?>
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -281,10 +281,10 @@ include '../includes/header.php';
                         <span><?= htmlspecialchars($cliente['bairro_nome']) ?></span>
                     </div>
                     
-                    <div class="mb-3">
+                    <!--<div class="mb-3">
                         <strong><i class="fas fa-truck me-2"></i>Frete:</strong><br>
                         <span><?= formatPrice($cliente['valor_frete']) ?></span>
-                    </div>
+                    </div> -->
                 </div>
             </div>
             

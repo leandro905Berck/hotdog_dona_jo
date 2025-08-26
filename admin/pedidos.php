@@ -83,7 +83,7 @@ if ($date_filter) {
 
 $where_clause = empty($where_conditions) ? '' : 'WHERE ' . implode(' AND ', $where_conditions);
 
-// Get orders with customer details
+// Get orders with customer details and troco information
 $stmt = $pdo->prepare("
     SELECT DISTINCT p.*, c.nome as cliente_nome, c.telefone as cliente_telefone, c.email as cliente_email,
            b.nome as bairro_nome
@@ -175,8 +175,7 @@ if ($selected_order_id) {
         <h5><i class="fas fa-shopping-cart me-2"></i>Lista de Pedidos (<?= count($pedidos) ?>)</h5>
         <!-- Debug info - remover depois -->
         <small class="text-muted">
-            Pendentes: <?= count(array_filter($pedidos, function($p) { return $p['status'] === 'pendente'; })) ?> | 
-            Badge mostra: <span id="debug-badge-count"><?= $notification_count ?></span>
+            Pendentes: <?= count(array_filter($pedidos, function($p) { return $p['status'] === 'pendente'; })) ?>
         </small>
     </div>
     <div class="card-body">
@@ -191,6 +190,7 @@ if ($selected_order_id) {
                         <th>Cliente</th>
                         <th>Itens</th>
                         <th>Total</th>
+                        <th>Troco</th>
                         <th>Status</th>
                         <th>Data</th>
                         <th>Ações</th>
@@ -218,6 +218,18 @@ if ($selected_order_id) {
                         </td>
                         <td>
                             <strong><?= formatPrice($pedido['total_geral']) ?></strong>
+                        </td>
+                        <td>
+                            <?php if ($pedido['precisa_troco']): ?>
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-coins me-1"></i>
+                                    <?= formatPrice($pedido['troco']) ?>
+                                </span>
+                                <br>
+                                <small class="text-muted">Para: <?= formatPrice($pedido['valor_pago']) ?></small>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Não</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <span class="badge status-<?= $pedido['status'] ?> px-2 py-1">
@@ -336,6 +348,7 @@ function printOrder(orderId) {
                 .items-table th, .items-table td { border: 1px solid #000; padding: 8px; text-align: left; }
                 .total-section { text-align: right; margin-top: 20px; }
                 .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+                .troco-info { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 4px; }
             </style>
         </head>
         <body>
@@ -369,16 +382,17 @@ function printOrder(orderId) {
         });
 }
 
-// Auto-refresh every 30 seconds for pending orders
+
+// Auto-refresh page every 30 seconds to check for order updates
 setInterval(function() {
-    // Update badge count without full page reload
-    updateNotificationBadge();
+    // Only refresh if there are pending or active orders
+    const hasActiveOrders = <?= json_encode(array_filter($pedidos, function($p) { 
+        return in_array($p['status'], ['pendente', 'aceito', 'preparando', 'entregando']); 
+    })) ?>.length > 0;
     
-    // Only reload if there are pending orders and user hasn't interacted recently
-    const hasPendingOrders = <?= json_encode(count(array_filter($pedidos, function($p) { return $p['status'] === 'pendente'; }))) ?> > 0;
-    if (hasPendingOrders && !document.querySelector('.modal.show')) {
-        // Only reload if no modal is open
-        setTimeout(() => location.reload(), 1000);
+    if (hasActiveOrders) {
+        // Silent refresh - could be replaced with AJAX call
+        location.reload();
     }
 }, 30000);
 </script>

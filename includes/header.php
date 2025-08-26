@@ -13,6 +13,7 @@ include_once 'functions.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/style.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="../assets/imagens/logo_s.png">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
@@ -30,11 +31,13 @@ include_once 'functions.php';
                     <li class="nav-item">
                         <a class="nav-link" href="/"><i class="fas fa-home me-1"></i>Cardápio</a>
                     </li>
+                    <!--
                     <?php if (isLoggedIn()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="/cliente/pedidos.php"><i class="fas fa-clipboard-list me-1"></i>Meus Pedidos</a>
                     </li>
                     <?php endif; ?>
+                    -->
                 </ul>
                 
                 <ul class="navbar-nav">

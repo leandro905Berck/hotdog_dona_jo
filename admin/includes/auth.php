@@ -10,9 +10,11 @@ requireAdmin();
 
 // Get pending orders count for admin (more accurate than notifications)
 try {
-    $stmt = $pdo->query("SELECT COUNT(DISTINCT id) as count FROM pedidos WHERE status = 'pendente'");
-    $notification_count = $stmt->fetch()['count'];
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM pedidos WHERE TRIM(LOWER(status)) = ?");
+    $stmt->execute(['pendente']);
+    $notification_count = (int) $stmt->fetch()['count'];
 } catch (PDOException $e) {
+    error_log("Erro ao contar pedidos pendentes: " . $e->getMessage());
     $notification_count = 0;
 }
 ?>
@@ -25,6 +27,7 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/style.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="../assets/imagens/logo_s.png">
 </head>
 <body>
     <div class="container-fluid">
@@ -48,10 +51,7 @@ try {
                         </li>
                         <li class="nav-item">
                             <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'pedidos.php' ? 'active' : '' ?>" href="/admin/pedidos.php">
-                                <i class="fas fa-shopping-cart me-2"></i>Pedidos
-                                <?php if ($notification_count > 0): ?>
-                                <span class="badge bg-danger ms-2" id="notification-badge"><?= $notification_count ?></span>
-                                <?php endif; ?>
+                                <i class="fas fa-shopping-cart me-2"></i>Pedidos <span class="badge bg-danger rounded-pill ms-1"><?= $notification_count ?></span>
                             </a>
                         </li>
                         <li class="nav-item">
