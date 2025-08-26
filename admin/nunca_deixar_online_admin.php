@@ -1,4 +1,10 @@
 <?php
+
+//**********************ATENÇÃO**********************
+//Nunca deixar online esse arquivo, deve ser usado somente na criação dos usuários Admin;
+//o mesmo nunca deverá ficar no diretorio pois não tem segurança alguma, após a criação do Admin;
+//apague esse arquivo imediatamente antes de deixar o site em funcionamento
+
 // Configuração do banco de dados
 include '../includes/conexao.php';
 
